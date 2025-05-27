@@ -1,5 +1,5 @@
 # E_TierTextSaver
-Just for those who hate &lt;pad> XD
+For everyone who's sick of <pad>😂
 
 This is a custom ComfyUI node that saves processed text to a `.txt` file. The node allows you to remove any specified string from the input text (e.g., `<pad>`) and saves the cleaned result to disk using the provided image filename (with the extension removed).
 
