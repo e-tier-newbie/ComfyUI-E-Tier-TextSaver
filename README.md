@@ -45,11 +45,11 @@ To ensure safe file operations, all output paths are strictly validated:
 
 ⚙️ **Node Parameters**
 
-| Parameter    | Description                                   |
-|--------------|-----------------------------------------------|
-| `text`       | The text to be saved                          |
-| `filename`   | Optional custom file name                     |
-| `output_dir` | Must be an existing, validated output directory |
+| Parameter   | Description                                     |
+|-------------|-------------------------------------------------|
+| `text`      | The text to be saved                            |
+| `filename`  | Required file name for the saved `.txt` file    |
+| `output_dir`| Must be an existing, validated output directory |
 
 ---
 
