@@ -8,14 +8,14 @@ app.registerExtension({
 			function populate(text) {
 				const values = Array.isArray(text) ? text : [text];
 
-				
-				const startIndex = 4;
-
-				
-				while (this.widgets?.length > startIndex) {
-					const w = this.widgets.pop();
-					w.onRemove?.();
-				}
+				// 출력용 위젯만 제거 (이전 출력 창이 중복되지 않도록)
+				this.widgets = this.widgets.filter(w => {
+					if (w.name?.startsWith?.("text_output_")) {
+						w.onRemove?.();
+						return false;
+					}
+					return true;
+				});
 
 				for (let i = 0; i < values.length; i++) {
 					const w = ComfyWidgets["STRING"](
@@ -54,7 +54,6 @@ app.registerExtension({
 				onConfigure?.apply(this, arguments);
 				const widgets_values = this[VALUES];
 				if (widgets_values?.length > 4) {
-					
 					requestAnimationFrame(() => {
 						populate.call(this, widgets_values.slice(4));
 					});
