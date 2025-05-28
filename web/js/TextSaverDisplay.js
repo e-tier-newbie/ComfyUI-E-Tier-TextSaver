@@ -8,7 +8,7 @@ app.registerExtension({
 			function populate(text) {
 				const values = Array.isArray(text) ? text : [text];
 
-				// 출력용 위젯만 제거 (이전 출력 창이 중복되지 않도록)
+				
 				this.widgets = this.widgets.filter(w => {
 					if (w.name?.startsWith?.("text_output_")) {
 						w.onRemove?.();

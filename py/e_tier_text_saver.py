@@ -29,33 +29,45 @@ class E_TierTextSaver:
 
     def validate_directory_path(self, path):
         abs_path = os.path.abspath(path)
-
-        # 차단된 시스템 경로
         forbidden_paths = [
             "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\Users\\Default"
         ]
         for fp in forbidden_paths:
             if abs_path.lower().startswith(fp.lower()):
                 raise ValueError(f"Access to system directory is forbidden: {abs_path}")
-
-        # 경로 탈출 및 위험 문자 차단
         if ".." in path or path.strip().startswith(("/", "\\")):
             raise ValueError(f"Suspicious relative path: {path}")
         dangerous_chars = ['|', ';', '&', '$', '<', '>', '"']
         if any(c in path for c in dangerous_chars):
             raise ValueError(f"Illegal character detected in path: {path}")
-
-        # 존재 여부와 유형 확인
         if os.path.exists(abs_path):
             if not os.path.isdir(abs_path):
                 raise ValueError(f"Path exists but is not a directory: {abs_path}")
         else:
-            if os.path.splitext(abs_path)[1]:  # 확장자 존재 (예: .txt, .py 등)
+            if os.path.splitext(abs_path)[1]:
                 raise ValueError(f"File path detected but does not exist: {abs_path}")
             else:
                 raise ValueError(f"Directory does not exist: {abs_path}")
-
         return abs_path
+
+    def sanitize_input(self, text):
+        original = text
+        text = html.escape(text)
+        blocked_patterns = ["<script>", "</script>", "eval(", "os.system(", "import", "exec("]
+        for pattern in blocked_patterns:
+            if pattern in text:
+                text = text.replace(pattern, "")
+        if text != original:
+            print("[E_TierTextSaver] Text was sanitized for safety.")
+        return text
+
+    def sanitize_filename(self, name):
+        original = name
+        forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+        sanitized = "".join(c if c not in forbidden_chars else "_" for c in name).strip()
+        if sanitized != original:
+            print("[E_TierTextSaver] Filename was sanitized for safety.")
+        return sanitized
 
     def save_cleaned_text(self, text, filename, text_to_remove, output_dir, unique_id=None, extra_pnginfo=None):
         try:
@@ -68,13 +80,16 @@ class E_TierTextSaver:
             if isinstance(output_dir, list):
                 output_dir = output_dir[0]
 
-            # 텍스트 정제 및 필터링
             cleaned_text = text.replace(text_to_remove, "")
             cleaned_text = self.sanitize_input(cleaned_text)
 
             base_name = os.path.splitext(os.path.basename(filename))[0]
+            safe_base_name = self.sanitize_filename(base_name)
             output_dir = self.validate_directory_path(output_dir)
-            output_path = os.path.join(output_dir, base_name + ".txt")
+            output_path = os.path.join(output_dir, safe_base_name + ".txt")
+
+            if os.path.exists(output_path):
+                print(f"[E_TierTextSaver] === WARNING === Overwriting existing file at {output_path}")
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(cleaned_text)
@@ -98,18 +113,6 @@ class E_TierTextSaver:
                 "ui": {"text": [self.last_error_message]},
                 "result": (self.last_error_message,)
             }
-
-    def sanitize_input(self, text):
-        """
-        보안 상 문제되는 문자열 제거
-        """
-        text = html.escape(text)
-        blocked_patterns = ["<script>", "</script>", "eval(", "os.system(", "import", "exec("]
-        for pattern in blocked_patterns:
-            if pattern in text:
-                print(f"[E_TierTextSaver] Security Warning: Blocked harmful code pattern: {pattern}")
-            text = text.replace(pattern, "")
-        return text
 
 
 NODE_CLASS_MAPPINGS = {
