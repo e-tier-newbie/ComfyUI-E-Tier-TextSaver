@@ -1,25 +1,77 @@
-# E_TierTextSaver
-For everyone who's sick of `<pad>`😂
+📦 **ComfyUI-E-Tier-TextSaver**
 
-This is a custom ComfyUI node that saves processed text to a `.txt` file. The node allows you to remove any specified string from the input text (e.g., `<pad>`) and saves the cleaned result to disk using the provided image filename (with the extension removed).
+A secure and flexible text-saving node for ComfyUI — optimized for LoRA dataset workflows.  
+Supports safe `.txt` export after captioning nodes such as Florence2.
 
-## Features
+---
 
-- Removes any specified substring from the input text
-- Automatically strips file extensions like `.png`, `.jpg`, `.webp`, etc.
-- Saves the result as `.txt` file in a custom output directory
-- Lightweight and easy to use
+✨ **Key Features**
 
-## Input Fields
+- ✅ Save caption text to custom paths  
+- 🔐 Strict security validation to prevent unsafe writes  
+- 🧩 Works seamlessly with Florence/BLIP caption nodes  
+- 📂 Supports LoRA dataset directory workflows  
 
-| Field            | Description                                              |
-|------------------|--------------------------------------------------|
-| `text`              | The input string to clean and save            |
-| `text_to_remove` | Substring to remove from the input        |
-| `filename`       | Source filename (e.g., `image.png`)            |
-| `output_dir`     | Directory to save the cleaned `.txt` file       |
+---
 
-## Installation
+🧑‍💻 **Use Case Example**
 
-You can install this node manually by placing it in your `custom_nodes` folder or clone via ComfyUI Manager using:
+In LoRA training workflows, users often need to save `.txt` captions beside their training images.
 
+Typical flow:
+
+```
+[Image Loader] ➡️ [Captioning Node] ➡️ [Text Saver (E-Tier)]
+```
+
+![workflow-example](assets/workflow_example.png)
+
+---
+
+🔐 **Security Measures**
+
+To ensure safe file operations, all output paths are strictly validated:
+
+| ✅ Allowed                  | ❌ Blocked                                      |
+|----------------------------|-------------------------------------------------|
+| Existing directories only  | Nonexistent paths (no auto-creation)            |
+| Absolute paths             | Relative traversal (e.g., `../`)                |
+| Safe characters            | Shell/metacharacters (e.g., `|`, `;`, `$`, etc.)|
+| Normal text input          | Malicious code (e.g., `eval`, `<script>`)       |
+
+📌 The final save path is printed clearly in the console for transparency.
+
+---
+
+⚙️ **Node Parameters**
+
+| Parameter    | Description                                   |
+|--------------|-----------------------------------------------|
+| `text`       | The text to be saved                          |
+| `filename`   | Optional custom file name                     |
+| `output_dir` | Must be an existing, validated output directory |
+
+---
+
+❗ **Notes**
+
+- If validation fails, a clear error will be shown.  
+- The node does not create directories — please prepare your dataset structure in advance.  
+- Designed with security in mind: safe by default, flexible by configuration.  
+
+---
+
+🛠️ **Installation**
+
+```bash
+git clone https://github.com/e-tier-newbie/ComfyUI-E-Tier-TextSaver
+```
+
+Place the folder under `ComfyUI/custom_nodes/`, then restart ComfyUI.
+
+---
+
+🙏 **Credits**
+
+E-tier-newbie  
+NDY
