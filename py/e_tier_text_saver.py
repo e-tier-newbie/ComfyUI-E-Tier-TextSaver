@@ -1,5 +1,6 @@
 import os
 import html
+import string
 
 class E_TierTextSaver:
     @classmethod
@@ -9,11 +10,11 @@ class E_TierTextSaver:
                 "text": ("STRING", {"forceInput": True}),
                 "filename": ("STRING", {"forceInput": True}),
                 "text_to_remove": ("STRING", {"default": "<pad>"}),
-                "output_dir": ("STRING", {"default": "./ComfyUI/output", "forceInput": False}),
+                "save_to": (["ComfyUI/output"], {"default": "ComfyUI/output"})
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
+                "extra_pnginfo": "EXTRA_PNGINFO"
             }
         }
 
@@ -24,36 +25,35 @@ class E_TierTextSaver:
     OUTPUT_NODE = True
 
     def __init__(self):
-        self.last_output = None
         self.last_error_message = None
 
-    def validate_directory_path(self, path):
-        abs_path = os.path.abspath(path)
-        forbidden_paths = [
-            "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\Users\\Default"
-        ]
-        for fp in forbidden_paths:
-            if abs_path.lower().startswith(fp.lower()):
-                raise ValueError(f"Access to system directory is forbidden: {abs_path}")
-        if ".." in path or path.strip().startswith(("/", "\\")):
-            raise ValueError(f"Suspicious relative path: {path}")
-        dangerous_chars = ['|', ';', '&', '$', '<', '>', '"']
-        if any(c in path for c in dangerous_chars):
-            raise ValueError(f"Illegal character detected in path: {path}")
-        if os.path.exists(abs_path):
-            if not os.path.isdir(abs_path):
-                raise ValueError(f"Path exists but is not a directory: {abs_path}")
-        else:
-            if os.path.splitext(abs_path)[1]:
-                raise ValueError(f"File path detected but does not exist: {abs_path}")
-            else:
-                raise ValueError(f"Directory does not exist: {abs_path}")
-        return abs_path
+    def validate_directory_path(self, label):
+        whitelist_path = "./ComfyUI/output"
+        if os.path.islink(whitelist_path):
+            raise ValueError("Whitelist path must not be a symbolic link.")
+        whitelist = {
+            "ComfyUI/output": os.path.realpath(whitelist_path)
+        }
+        if label not in whitelist:
+            raise ValueError(f"Unknown output directory label: {label}")
+        resolved_path = os.path.realpath(whitelist[label])
+        if not os.path.isdir(resolved_path):
+            raise ValueError(f"Path does not exist or is not a directory: {resolved_path}")
+        if not resolved_path.startswith(whitelist[label]):
+            raise ValueError(f"Symbolic link attack detected: {resolved_path}")
+        return resolved_path
 
     def sanitize_input(self, text):
         original = text
-        text = html.escape(text)
-        blocked_patterns = ["<script>", "</script>", "eval(", "os.system(", "import", "exec("]
+        blocked_patterns = [
+            "<script>", "</script>", "eval(", "exec(", "compile(", "os.system(",
+            "os.popen(", "subprocess.call(", "subprocess.Popen(", "__import__",
+            "__builtins__", "open(", "input(", "getattr(", "setattr(",
+            "globals(", "locals(", "sys.modules", "shlex.split(",
+            "marshal.loads(", "pickle.loads(", "base64.b64decode(",
+            "ctypes.", "ffi.", "socket.", "urllib.request.urlopen(",
+            "requests.get("
+        ]
         for pattern in blocked_patterns:
             if pattern in text:
                 text = text.replace(pattern, "")
@@ -64,12 +64,15 @@ class E_TierTextSaver:
     def sanitize_filename(self, name):
         original = name
         forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
-        sanitized = "".join(c if c not in forbidden_chars else "_" for c in name).strip()
+        sanitized = "".join(c if c in string.printable and c not in forbidden_chars else "_" for c in name).strip()
+        if sanitized == "":
+            print("[E_TierTextSaver] Filename was empty. Using default name: 'untitled'")
+            return "untitled"
         if sanitized != original:
             print("[E_TierTextSaver] Filename was sanitized for safety.")
         return sanitized
 
-    def save_cleaned_text(self, text, filename, text_to_remove, output_dir, unique_id=None, extra_pnginfo=None):
+    def save_cleaned_text(self, text, filename, text_to_remove, save_to, unique_id=None, extra_pnginfo=None):
         try:
             if isinstance(text, list):
                 text = "".join(text)
@@ -77,27 +80,25 @@ class E_TierTextSaver:
                 filename = filename[0]
             if isinstance(text_to_remove, list):
                 text_to_remove = text_to_remove[0]
-            if isinstance(output_dir, list):
-                output_dir = output_dir[0]
+            if isinstance(save_to, list):
+                save_to = save_to[0]
 
             cleaned_text = text.replace(text_to_remove, "")
             cleaned_text = self.sanitize_input(cleaned_text)
+            cleaned_text.encode("utf-8")
 
             base_name = os.path.splitext(os.path.basename(filename))[0]
             safe_base_name = self.sanitize_filename(base_name)
-            output_dir = self.validate_directory_path(output_dir)
+            output_dir = self.validate_directory_path(save_to)
             output_path = os.path.join(output_dir, safe_base_name + ".txt")
 
             if os.path.exists(output_path):
-                print(f"[E_TierTextSaver] === WARNING === Overwriting existing file at {output_path}")
+                print("[E_TierTextSaver] Overwriting existing file")
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(cleaned_text)
 
-            if self.last_output != cleaned_text:
-                self.last_output = cleaned_text
-                print(f"[E_TierTextSaver] Security Check Passed: Text Sanitized Successfully.")
-                print(f"[E_TierTextSaver] Text File Created Successfully at {output_path}")
+            print(f"[E_TierTextSaver] Text File Created Successfully at:\n{output_path}")
 
             return {
                 "ui": {"text": [cleaned_text], "output_dir": output_path},
@@ -114,11 +115,10 @@ class E_TierTextSaver:
                 "result": (self.last_error_message,)
             }
 
-
 NODE_CLASS_MAPPINGS = {
-    "E_TierTextSaver": E_TierTextSaver,
+    "E_TierTextSaver": E_TierTextSaver
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "E_TierTextSaver": "Text Saver (E-Tier)",
+    "E_TierTextSaver": "Text Saver (E-Tier)"
 }
