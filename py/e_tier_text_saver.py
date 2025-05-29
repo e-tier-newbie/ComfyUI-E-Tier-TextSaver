@@ -1,6 +1,10 @@
 import os
 import html
-import string
+from types import MappingProxyType
+
+WHITELIST_LABELS = MappingProxyType({
+    "ComfyUI/output": os.path.realpath("./ComfyUI/output")
+})
 
 class E_TierTextSaver:
     @classmethod
@@ -10,7 +14,7 @@ class E_TierTextSaver:
                 "text": ("STRING", {"forceInput": True}),
                 "filename": ("STRING", {"forceInput": True}),
                 "text_to_remove": ("STRING", {"default": "<pad>"}),
-                "save_to": (["ComfyUI/output"], {"default": "ComfyUI/output"})
+                "save_to": (list(WHITELIST_LABELS.keys()), {"default": "ComfyUI/output"})
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -28,19 +32,15 @@ class E_TierTextSaver:
         self.last_error_message = None
 
     def validate_directory_path(self, label):
-        whitelist_path = "./ComfyUI/output"
-        if os.path.islink(whitelist_path):
-            raise ValueError("Whitelist path must not be a symbolic link.")
-        whitelist = {
-            "ComfyUI/output": os.path.realpath(whitelist_path)
-        }
-        if label not in whitelist:
+        if label not in WHITELIST_LABELS:
             raise ValueError(f"Unknown output directory label: {label}")
-        resolved_path = os.path.realpath(whitelist[label])
+        resolved_path = os.path.realpath(WHITELIST_LABELS[label])
+        if os.path.islink(resolved_path):
+            raise ValueError("Symbolic link not allowed")
         if not os.path.isdir(resolved_path):
             raise ValueError(f"Path does not exist or is not a directory: {resolved_path}")
-        if not resolved_path.startswith(whitelist[label]):
-            raise ValueError(f"Symbolic link attack detected: {resolved_path}")
+        if not resolved_path.startswith(WHITELIST_LABELS[label]):
+            raise ValueError("Symbolic link attack detected")
         return resolved_path
 
     def sanitize_input(self, text):
@@ -64,7 +64,10 @@ class E_TierTextSaver:
     def sanitize_filename(self, name):
         original = name
         forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
-        sanitized = "".join(c if c in string.printable and c not in forbidden_chars else "_" for c in name).strip()
+        sanitized = "".join(c if c not in forbidden_chars else "_" for c in name).strip()
+        if len(sanitized) > 100:
+            sanitized = sanitized[:100]
+            print("[E_TierTextSaver] Filename too long. Truncating to 100 characters.")
         if sanitized == "":
             print("[E_TierTextSaver] Filename was empty. Using default name: 'untitled'")
             return "untitled"
@@ -84,6 +87,8 @@ class E_TierTextSaver:
                 save_to = save_to[0]
 
             cleaned_text = text.replace(text_to_remove, "")
+            if cleaned_text != text:
+                print(f"[E_TierTextSaver] Removed unwanted token: '{text_to_remove}'")
             cleaned_text = self.sanitize_input(cleaned_text)
             cleaned_text.encode("utf-8")
 
@@ -91,6 +96,16 @@ class E_TierTextSaver:
             safe_base_name = self.sanitize_filename(base_name)
             output_dir = self.validate_directory_path(save_to)
             output_path = os.path.join(output_dir, safe_base_name + ".txt")
+
+            if len(output_path) >= 255:
+                error_message = "[E_TierTextSaver] Error: Path too long (limit: 255 characters)"
+                if self.last_error_message != error_message:
+                    self.last_error_message = error_message
+                    print(error_message)
+                return {
+                    "ui": {"text": [error_message]},
+                    "result": (error_message,)
+                }
 
             if os.path.exists(output_path):
                 print("[E_TierTextSaver] Overwriting existing file")
