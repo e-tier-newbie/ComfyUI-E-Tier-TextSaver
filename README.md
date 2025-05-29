@@ -1,7 +1,6 @@
 📦 **ComfyUI-E-Tier-TextSaver**
 
-Tired of annoying tokens like `<pad>` in your captioned prompts?  
-This is for you.
+Sick of annoying <pad> tokens messing up your prompts?😂 This one’s for you.
 
 A secure and flexible text-saving node for ComfyUI.  
 After captioning with Florence2 or similar, it automatically strips unwanted tokens and saves a clean `.txt` file.
