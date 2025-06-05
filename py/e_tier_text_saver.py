@@ -1,10 +1,27 @@
 import os
+import yaml
 import html
 from types import MappingProxyType
 
-WHITELIST_LABELS = MappingProxyType({
-    "ComfyUI/output": os.path.realpath("./ComfyUI/output")
-})
+WL_CONFIG_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), "config", "E_Tier_WL.yaml"))
+
+def load_whitelist():
+    try:
+        print(f"[E_TierTextSaver] Loading whitelist from: {WL_CONFIG_PATH}")
+        with open(WL_CONFIG_PATH, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+            if not isinstance(data, dict) or "whitelist" not in data:
+                raise ValueError("Invalid whitelist YAML format")
+            whitelist = {}
+            for label, path in data["whitelist"].items():
+                real_path = os.path.realpath(path)
+                whitelist[label] = real_path
+            return MappingProxyType(whitelist)
+    except Exception as e:
+        print(f"[E_TierTextSaver] Failed to load whitelist file: {e}")
+        return MappingProxyType({})
+
+WHITELIST_LABELS = load_whitelist()
 
 class E_TierTextSaver:
     @classmethod
@@ -14,7 +31,7 @@ class E_TierTextSaver:
                 "text": ("STRING", {"forceInput": True}),
                 "filename": ("STRING", {"forceInput": True}),
                 "text_to_remove": ("STRING", {"default": "<pad>"}),
-                "save_to": (list(WHITELIST_LABELS.keys()), {"default": "ComfyUI/output"})
+                "save_to": (list(WHITELIST_LABELS.keys()), {"default": list(WHITELIST_LABELS.keys())[0] if WHITELIST_LABELS else None})
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -34,7 +51,7 @@ class E_TierTextSaver:
     def validate_directory_path(self, label):
         if label not in WHITELIST_LABELS:
             raise ValueError(f"Unknown output directory label: {label}")
-        resolved_path = os.path.realpath(WHITELIST_LABELS[label])
+        resolved_path = WHITELIST_LABELS[label]
         if os.path.islink(resolved_path):
             raise ValueError("Symbolic link not allowed")
         if not os.path.isdir(resolved_path):

@@ -1,6 +1,7 @@
-📦 **ComfyUI-E-Tier-TextSaver**
 
-Sick of annoying <pad> tokens messing up your prompts?😂 This one’s for you.
+# 📦 ComfyUI-E-Tier-TextSaver
+
+Sick of annoying <pad> tokens messing up your prompts? 😂 This one’s for you.
 
 A secure and flexible text-saving node for ComfyUI.  
 After captioning with Florence2 or similar, it automatically strips unwanted tokens and saves a clean `.txt` file.
@@ -46,11 +47,27 @@ All save paths go through strict validation checks:
 
 ⚙️ **Node Parameters**
 
-| Parameter   | Description                                                  |
-|-------------|--------------------------------------------------------------|
-| `text`      | The text content to be saved (required)                      |
-| `filename`  | Filename for the resulting `.txt` file (required)            |
-| `save_to`   | Output directory (must be inside `ComfyUI/output`)           |
+| Parameter   | Description                                        |
+|-------------|----------------------------------------------------|
+| `text`      | The text content to be saved (required)            |
+| `filename`  | Filename for the resulting `.txt` file (required)  |
+| `save_to`   | Output directory selected from a dropdown list      |
+
+---
+
+### About the `save_to` Parameter
+
+The save_to dropdown paths are specified in the node's YAML whitelist file.
+Users can set custom keys (names) and their corresponding directory paths in the YAML whitelist like this:
+
+```yaml
+whitelist:
+  ComfyUI/output: "./ComfyUI/output"
+  CustomFolder: "./my_custom_output"
+```
+
+Here, `"CustomFolder"` is the label shown in the dropdown, and `"./my_custom_output"` is the actual directory path used for saving files.  
+This allows flexible and user-friendly naming of output locations.
 
 ---
 
