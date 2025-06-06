@@ -10,7 +10,7 @@ Repository = "https://github.com/e-tier-newbie/ComfyUI-E-Tier-TextSaver"
 #  Used by Comfy Registry https://registry.comfy.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "e-tier-newbie"
 DisplayName = "ComfyUI-E-Tier-TextSaver"
 Icon = ""
 includes = []
