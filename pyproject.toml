@@ -1,0 +1,16 @@
+[project]
+name = "e-tier-textsaver"
+description = "A node for saving cleaned text outputs, useful for LoRA training. Removes unwanted tokens like <pad> and saves to .txt."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["pyyaml"]
+
+[project.urls]
+Repository = "https://github.com/e-tier-newbie/ComfyUI-E-Tier-TextSaver"
+#  Used by Comfy Registry https://registry.comfy.org
+
+[tool.comfy]
+PublisherId = "e-tier-newbie"
+DisplayName = "ComfyUI-E-Tier-TextSaver"
+Icon = ""
+includes = []
